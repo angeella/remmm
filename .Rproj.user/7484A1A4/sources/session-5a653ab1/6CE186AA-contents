@@ -1,0 +1,102 @@
+simulateData <- function(Sigma, rho, beta, gamma, J, nJ, sdJ, 
+                         seed, sd_sample, shared_re = TRUE, shared_fe = TRUE){
+  
+  set.seed(seed)
+  
+  m <- length(beta)
+  
+  if(Sigma == "autocorrelation"){
+    Sigma <- outer(1:m, 1:m, function(i, j) rho^abs(i - j))
+    diag(Sigma) <- sd_sample
+  }else{
+    if(Sigma == "equicorrelation"){
+      Sigma <- matrix(rho, m, m)  
+      diag(Sigma) <- sd_sample^2
+    }else{
+      
+      if(Sigma == "casuale"){
+        A <- matrix(runif(m^2)*2-1, ncol=m) 
+        Sigma <- t(A) %*% A
+      }else{
+        Sigma <- diag(m)
+      }
+    }
+  }
+  
+  #array number of obs x var (id, X, Z, U, RX, RZ, eps) x outcomes
+  
+  db <- array(NA, dim = c(sum(nJ), 7, m))
+  
+  db[,1,] <- rep(seq(J), times = nJ)
+  
+  
+  if(shared_fe){
+    Sigma_fixed <- matrix(c(1, 0.7, 0.7, 1), ncol = 2)
+    
+    fixed_effects <- mvrnorm(nrow(db[,,1]), rep(0, 2), 
+                             Sigma = Sigma_fixed)
+    
+    db[,2,] <- matrix(rep(fixed_effects[,1],m), ncol = m)
+    db[,3,] <- matrix(rep(fixed_effects[,2],m), ncol = m)
+    db[,7,] <- mvrnorm(nrow(db), c(rep(0, m)), Sigma)
+    
+  }else{
+    Sigma_fixed <- matrix(0.7, 2*m, 2*m)  
+    diag(Sigma_fixed) <- 1
+    
+    fixed_effects <- mvrnorm(nrow(db[,,1]), rep(0, 2*m), 
+                             Sigma = Sigma_fixed)
+    
+    db[,2,] <- fixed_effects[,1:m]
+    db[,3,] <- fixed_effects[,(m+1):(2*m)]
+    
+    db[,7,] <- mvrnorm(nrow(db), c(rep(0, m)), Sigma)
+    
+  }
+  
+  Sigma_random <- matrix(c(sdJ^2, 0.5, 0.5, 
+                           0.5, sdJ^2, 0.5,
+                           0.5, 0.5, sdJ^2),
+                         ncol = 3, nrow = 3)
+  
+  if(shared_re){
+    
+    random_effects <- mvrnorm(J, c(0,0,0), 
+                              Sigma = Sigma_random)
+    
+    
+    db[,4,] <- matrix(rep(random_effects[db[,1,1], 1], m), ncol = m)
+    db[,5,] <- matrix(rep(random_effects[db[,1,1], 2], m), ncol = m)
+    db[,6,] <- matrix(rep(random_effects[db[,1,1], 3], m), ncol = m)
+    
+    
+  }else{
+    
+    for(i in seq_len(m)){
+      random_effects <- mvrnorm(J, c(0,0,0), 
+                                Sigma = Sigma_random)
+      
+      db[,4,i] <- random_effects[db[,1,1], 1]
+      db[,5,i] <- random_effects[db[,1,1], 2]
+      db[,6,i] <- random_effects[db[,1,1], 3]
+      
+    }
+    
+    
+  }
+  
+  db_list <- list()
+  for( i in seq_len(m)){
+    
+    db_list[[i]] <- data.frame(db[,,i])
+    colnames(db_list[[i]]) <- c("id", "X", "Z", "U", "RX", "RZ", "eps")
+    db_list[[i]]$y <- db_list[[i]]$X * beta[i] + db_list[[i]]$Z * gamma+
+      db_list[[i]]$U + db_list[[i]]$RX * db_list[[i]]$X +
+      db_list[[i]]$RZ * db_list[[i]]$Z  + db_list[[i]]$eps
+  }
+  
+  attr(db_list, "Sigma_eps_true") <- Sigma
+  attr(db_list, "Sigma_random_true")   <- Sigma_random
+  
+  return(db_list)
+}

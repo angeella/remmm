@@ -1,0 +1,80 @@
+rm(list = ls())
+
+
+
+library(MASS)
+library(lme4)
+library(lmerTest)
+library(flipscores)
+library(dplyr)
+
+source("code/simulateData.R")
+source("code/flipscores_standardized.R")
+
+
+gamma = 2
+J = 10
+max_nsample = 10
+nJ = rep(max_nsample, J)
+sdJ = 1
+B = 1000
+nsim = 1000
+m <- 50  
+beta = c(rep(0, m*0.8), rep(2, m*0.2))
+Sigma = "equicorrelation"
+sd_sample = 1
+
+rho = 0.2
+
+sim <- expand.grid(sim = seq(nsim),
+                   rho = rho)
+
+res_lmer <- matrix(0, nrow = nrow(sim), ncol = m)
+res_lmer_wrong <- matrix(0, nrow = nrow(sim), ncol = m)
+res_flipscores <- matrix(0, nrow = nrow(sim), ncol = m)
+res_flipscores_std <- matrix(0, nrow = nrow(sim), ncol = m)
+out_lmer_warning <- list()
+out_lmer_wrong_warning <- list()
+
+cor_sim <- c()
+i <- 1
+for(i in seq(nrow(sim))){
+  print(i)
+  db <- simulateData(Sigma = Sigma, 
+                     rho = sim$rho[i], beta = beta, gamma = gamma, 
+                     J = J, nJ = nJ, sdJ = sdJ, m = m,
+                     seed = sim$sim[i], 
+                     sd_sample = sd_sample)
+  
+  
+  
+  #Mixed model 
+  
+  formula_list <- sapply(seq(m), function(x) 
+    as.formula(paste0("y", x, "~ Z + (1+X+Z|id)")))
+  
+
+  
+  formula_list_flip <- sapply(seq(m), function(x) as.formula(paste0("y", x, "~ X + Z")))
+  flips<- flipscores:::.make_flips(n_obs = nrow(db),n_flips = B, id = db$id)
+  
+
+  #Flipscores standardized
+  
+  out_flipscores_std <- sapply(c(1:m), function(x){ 
+    
+    mod<-flipscores_standardized(formula = formula_list_flip[[x]], 
+                                 mixed_model = lmer(formula_list[[x]], data = db),
+                                 data = db, 
+                                 id = "id", 
+                                 flips = flips)
+    mod$Tspace[,2]
+  })
+  
+  res_flipscores_std[i,]<-jointest:::maxT.light(out_flipscores_std)
+  cor_sim[i] <- mean(cor(db[,grepl("y", colnames(db))])[-1,1])
+}
+
+
+mean(apply(res_flipscores_std[,c(1:40)], 1, min) <= 0.05)
+hist(cor_sim)
