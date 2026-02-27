@@ -14,7 +14,7 @@ make_formula_list <- function(formula, data) {
   m <- ncol(y_val)
   if(is.null(m)){
 
-    formula_list <- formula
+    formula_list <- list(formula)
     data <- data
 
   }else{

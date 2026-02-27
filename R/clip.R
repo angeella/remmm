@@ -1,7 +1,7 @@
 #' Clusterwise sign-flipping score test
 #'
 #'
-#' Implements a *clusterwise flip-based score test* for one or multiple outcomes
+#' Implements a *clusterwise sign-flipping score-based test* for one or multiple outcomes
 #' under within-cluster dependence (i.e., non-independent observations), as in
 #' linear mixed-model–like settings.
 #'
@@ -38,6 +38,8 @@
 #' }
 #'
 #' @seealso \code{\link[flipscores]{flipscores}}
+#'
+#' @import flipscores
 #'
 #' @examples
 #' \dontrun{

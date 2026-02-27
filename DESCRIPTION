@@ -1,16 +1,18 @@
 Package: remmm
-Type: Package
-Title: What the Package Does (Title Case)
+Type: clusterwise sign-flipping score-based test
+Title: It model data with within-cluster dependence and (univariate) multivariate responses as Generalized Linear Mixed Models
 Version: 0.1.0
 Authors@R: c(
     person(
-      "Jane", "Doe",
-      email = "jane@example.com",
+      "Angela", "Andreella",
+      email = "angela.andreella@unive.it",
       role = c("aut", "cre")
-    )
+    ), person("Livio", "Finos", role = "aut")
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
-License: What license is it under?
+Description: 
+  The method is described in Andreella and Finos (2026)
+Depends: flipscores, jointest
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.3.3
