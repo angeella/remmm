@@ -1,0 +1,20 @@
+- case of fixed effect different across outcomes
+- compute covhat from a mixed model? In this way we will depend on lme4.
+
+
+
+- Funzione clip: output modello
+- Funzione combina modelli clip
+- TDP su clip
+- summary, print, p.adjust as utils
+- classe clip: che prende output di clip o flip2sss
+
+
+Dipendenze: flipscores, jointest
+
+Output clip: summary uguale a join_flipscores, combine di jointest,
+
+- summary(res) invece di model response
+- summary(combine(res, by = "coefficient")) and by "response"
+
+Output simile a lme4?
