@@ -6,6 +6,7 @@
 ~%2FProjects%2FMLMMflipscores%2Fsim="2453B0EC"
 ~%2FRpackage%2Fquasar%2FDESCRIPTION="D20931CE"
 ~%2FRpackage%2Fremmm%2FDESCRIPTION="AEDE3EB7"
+~%2FRpackage%2Fremmm%2FNAMESPACE="8E92F9D9"
 ~%2FRpackage%2Fremmm%2FR%2Fclip.R="B91944A8"
 ~%2FRpackage%2Fremmm%2FR%2Fclip_model.R="13A32334"
 ~%2FRpackage%2Fremmm%2FR%2Fflip2sss.R="7B94676A"
@@ -13,3 +14,4 @@
 ~%2FRpackage%2Fremmm%2FR%2FsimulateData.R="01206B72"
 ~%2FRpackage%2Fremmm%2FR%2Futils.R="D9F3213D"
 ~%2FRpackage%2Fremmm%2FTODO="3D8D9D55"
+~%2FRpackage%2Fremmm%2Fman%2Fclip.Rd="BA97D6E8"
