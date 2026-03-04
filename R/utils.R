@@ -155,3 +155,8 @@ whiten_mf_from_V <- function(formula, data, V, id_col = NULL,
     Vinvsqrt = Vinvsqrt
   )
 }
+
+
+
+
+

@@ -1,6 +1,6 @@
 Package: remmm
-Type: clusterwise sign-flipping score-based test
-Title: It model data with within-cluster dependence and (univariate) multivariate responses as Generalized Linear Mixed Models
+Type: Package
+Title: Resampling-based multivariate mixed model infenrence
 Version: 0.1.0
 Authors@R: c(
     person(
@@ -9,9 +9,10 @@ Authors@R: c(
       role = c("aut", "cre")
     ), person("Livio", "Finos", role = "aut")
   )
-Description: 
-  The method is described in Andreella and Finos (2026)
-Depends: flipscores, jointest
+Description: Fits resampling-based multivariate mixed models for data with within-cluster dependence,
+  including multivariate responses, using generalized linear mixed models. The method is described in
+  Andreella and Finos (2026).
+Imports: flipscores, jointest, MASS, methods
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

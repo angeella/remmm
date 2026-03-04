@@ -34,9 +34,11 @@ A \code{jointest} object, i.e., a list containing the following objects:
 }
 }
 \description{
-This function fits a model based on the provided formula and data, accounting for clusters and summary statistics within the model.
+This function fits a model based on the provided formula and data, accounting for clusters and summary statistics within the model as described in
+A Andreella, J Goeman, J Hemerik, L Finos (2025) Robust Inference for Generalized Linear Mixed Models: A “Two-Stage Summary Statistics” Approach Based on Score Sign Flipping. Psychometrika, 1-23.
 }
 \examples{
+library(remmm)
 library(jointest)
 set.seed(123)
 # Simulate data
@@ -62,12 +64,8 @@ summary(combine(res))
 summary(combine_contrasts(res))
 
 # An alternative and more flexible definition of the model:
-# Define the summary statistics (here we propose the glm with firth correction
-# from the logistf package)
-summstats_within <- 'logistf::logistf(Y ~ X1, family = binomial(link = "logit"),
-control=logistf::logistf.control(maxit=100))'
-# however also the classic glm function can be used:
-#summstats_within <- 'glm(Y ~ X1, family = binomial(link = "logit"))'
+# Define the summary statistics
+summstats_within <- 'glm(Y ~ X1, family = binomial(link = "logit"))'
 
 # Then, compute the 2-Stage Summary Statistics approach
 # specifying the summary statistics (within cluster/subject)
@@ -77,9 +75,12 @@ summary(res)
 
 # We can also combine the tests:
 # Overall:
-summary(combine(res))
+summary(jointest::combine(res))
 # This is similar to an ANOVA test:
-summary(combine_contrasts(res))
+summary(jointest::combine_contrasts(res))
+}
+\references{
+Andreella, A., Goeman, J., Hemerik, J., Finos, L. (2025). Robust Inference for Generalized Linear Mixed Models: A “Two-Stage Summary Statistics” Approach Based on Score Sign Flipping. Psychometrika, 1-23. doi: 10.1017/psy.2024.22
 }
 \seealso{
 \code{\link{combine_contrasts}}, \code{\link{combine}}

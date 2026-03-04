@@ -60,13 +60,13 @@ is transformed/whitened via \code{whiten_mf_from_V()} using \code{covhat}, then
 summaries are returned in \code{Tspace} and \code{summary_table}.
 }
 \examples{
-\dontrun{
+library(remmm)
 df <- data.frame(y = rnorm(100), x = rnorm(100), id = rep(1:20, each = 5))
-V  <- diag(100)  # placeholder; depends on whiten_mf_from_V()
+V  <- diag(100)
 out <- clip(y ~ x, data = df, n_flips = 999, alternative = "two.sided",
             id = "id", seed = 1, covhat = V)
 out$summary_table
-}
+
 
 }
 \seealso{

@@ -1,5 +1,6 @@
 #' @title flipscores 2-Stage Summary Statistics approach
-#' @description This function fits a model based on the provided formula and data, accounting for clusters and summary statistics within the model.
+#' @description This function fits a model based on the provided formula and data, accounting for clusters and summary statistics within the model as described in
+#' A Andreella, J Goeman, J Hemerik, L Finos (2025) Robust Inference for Generalized Linear Mixed Models: A “Two-Stage Summary Statistics” Approach Based on Score Sign Flipping. Psychometrika, 1-23.
 #' @usage flip2sss(formula = NULL, data = NULL, cluster = NULL,
 #' family = "gaussian", summstats_within=NULL, n_flips = 5000, flips = NULL, ...)
 #' @param formula A formula or a list of formulas. It can be a complete model as.formula or a list of formulas, one for each element produced by the function.
@@ -19,6 +20,7 @@
 #'  \item{mods}{List of \code{glm} objects, i.e., first-step \code{glm} objects}
 #' }
 #' @examples
+#' library(remmm)
 #' library(jointest)
 #' set.seed(123)
 #' # Simulate data
@@ -44,12 +46,8 @@
 #' summary(combine_contrasts(res))
 #'
 #' # An alternative and more flexible definition of the model:
-#' # Define the summary statistics (here we propose the glm with firth correction
-#' # from the logistf package)
-#' summstats_within <- 'logistf::logistf(Y ~ X1, family = binomial(link = "logit"),
-#' control=logistf::logistf.control(maxit=100))'
-#' # however also the classic glm function can be used:
-#' #summstats_within <- 'glm(Y ~ X1, family = binomial(link = "logit"))'
+#' # Define the summary statistics
+#' summstats_within <- 'glm(Y ~ X1, family = binomial(link = "logit"))'
 #'
 #' # Then, compute the 2-Stage Summary Statistics approach
 #' # specifying the summary statistics (within cluster/subject)
@@ -59,14 +57,14 @@
 #'
 #' # We can also combine the tests:
 #' # Overall:
-#' summary(combine(res))
+#' summary(jointest::combine(res))
 #' # This is similar to an ANOVA test:
-#' summary(combine_contrasts(res))
+#' summary(jointest::combine_contrasts(res))
 #' @import flipscores
-#' @importFrom jointest join_flipscores
 #' @author Livio Finos, Angela Andreella
 #' @seealso \code{\link{combine_contrasts}}, \code{\link{combine}}
-#'
+#' @references
+#' Andreella, A., Goeman, J., Hemerik, J., Finos, L. (2025). Robust Inference for Generalized Linear Mixed Models: A “Two-Stage Summary Statistics” Approach Based on Score Sign Flipping. Psychometrika, 1-23. doi: 10.1017/psy.2024.22
 flip2sss <- function(formula=NULL,
                      data=NULL,
                      cluster=NULL,
@@ -76,95 +74,111 @@ flip2sss <- function(formula=NULL,
                      flips = NULL,
                      ...){
 
-  # if(is(cluster,"formula")){
-  #   cluster=eval(cluster,data)
-  # }
-
+  if(is(cluster,"formula")){
+    cluster=model.frame(cluster,data)
+  }
 
   ###################
 
   vars_between_within = .get_vars_between_within(formula, data, cluster)
 
-  vars_between=vars_between_within$vars_between
   vars_within=vars_between_within$vars_within
+  pred_vars_between_dummy=vars_between_within$pred_vars_between_dummy
+  data=vars_between_within$data
+  cluster=vars_between_within$cluster
+
   rm(vars_between_within)
-  ## make the second level dataset
-  set_between = unique(unlist(vars_between))
-  vars_between_formulas = lapply(vars_between, paste0, collapse = "+")
-  vars_between_formulas = paste(names(vars_between_formulas), vars_between_formulas, sep = "~")
-  vars_between_formulas = as.list(vars_between_formulas)
-  names(vars_between_formulas) = names(vars_between)
 
 
+  vars_between_formulas_dummy = lapply(pred_vars_between_dummy, paste0, collapse = "+")
+  vars_between_formulas_dummy = paste(names(vars_between_formulas_dummy), vars_between_formulas_dummy, sep = "~")
+  vars_between_formulas_dummy = as.list(vars_between_formulas_dummy)
+  names(vars_between_formulas_dummy) = names(pred_vars_between_dummy)
   #####################
 
-  set_between=setdiff(set_between,"1")
-#  data=data[,set_between]
-  set_between=c(".cluster",set_between)
-
-  data$.cluster=cluster
   if(is.null(summstats_within)){
     summstats_within=paste0("glm(",formula[[2]],formula[[1]],paste(collapse ="+",vars_within),", family=",family,")")
   }
-  data2lev <- jointest:::makedata2lev(data = data, cluster,
-                           summstats_within,set_between[-1])
-# data2lev = data %>%
- #   group_by(data[set_between]) %>%
-  #  summarise(as.data.frame(t(coefficients(eval(parse(text=summstats_within))))))
+  model.matrix.between=model.matrix(formula,data)[,unique(unlist(pred_vars_between_dummy)),drop=FALSE]
+  data2lev <- makedata2lev(data = data, cluster,
+                           summstats_within,model.matrix.between)
 
-  mods = lapply(vars_between_formulas, function(frm) glm(eval(frm, parent.frame()), data = data2lev))
+  intercept=attr(terms(formula), "intercept")
+  vars_between_formulas_dummy=lapply(vars_between_formulas_dummy,
+                                     function(x) paste0(x,"+",intercept))
+
+  mods = lapply(vars_between_formulas_dummy, function(frm) glm(eval(frm, parent.frame()), data = data2lev))
 
   for(i in 1:length(mods)){
     mods[[i]]$call$data = eval(data2lev)
-    mods[[i]]$call$formula = eval(as.formula(vars_between_formulas[[i]]))
+    mods[[i]]$call$formula = eval(as.formula(vars_between_formulas_dummy[[i]]))
   }
   res = join_flipscores(mods, flips = flips, ...)
 
-  # summary(res)
 
-  res$summary_table$Coeff = paste(res$summary_table$coefficient, res$summary_table$model,sep = ":")
-  res$summary_table$Coeff = gsub(":\\.Intercept\\.$", "", res$summary_table$coefficient)
-  res$summary_table$Coeff = gsub("\\(Intercept\\):", "", res$summary_table$coefficient)
+  # summary(res)
+  colnames(res$Tspace) = paste(res$summary_table$coefficient, res$summary_table$model,sep = "_model.")
+
+  res$summary_table$coefficient = paste(res$summary_table$coefficient, res$summary_table$model,sep = ":")
+  # res$summary_table$Coeff = gsub(":\\.Intercept\\.$", "", res$summary_table$coefficient)
+  #  res$summary_table$Coeff = gsub("\\(Intercept\\):", "", res$summary_table$coefficient)
+  res$summary_table$coefficient = gsub(":.Intercept.", "", res$summary_table$coefficient)
+  res$summary_table$coefficient = gsub("^\\(Intercept\\):", "", res$summary_table$coefficient)
+
+  res$summary_table <- res$summary_table[,c(2:ncol(res$summary_table))]
 
   # res$summary_table$Model = "flip2sss"
-  colnames(res$Tspace) = paste(res$summary_table$coefficient, res$summary_table$model,sep = "_model.")
+
   res$mods=mods
   res
+
+
 }
 
 ######################
 .expand_form <- function(FUN){
 
-out <- reformulate(labels(terms(FUN)), FUN[[2]])
+  out <- reformulate(labels(terms(FUN)), FUN[[2]])
   out
 }
 ######################
 .get_vars_between_within <- function(formula, data, cluster){
   formula=.expand_form(formula)
-  #clst_vals = unique(cluster) NON SERVE!
+
+  idnas=which(is.na(data),arr.ind = TRUE)
+  if(length(idnas)>0){
+    idnas=unique(idnas[,1])
+    data=data[-idnas,,drop=FALSE]
+    cluster=cluster[-idnas]
+  }
+
   D = model.matrix(formula, data = data)
 
   ## find constant cols within cluster
   const_id = do.call(rbind, by(D, cluster, function(D) as.data.frame(t(apply(D, 2, is.constant)))))
   vars_between_intercept_id = apply(const_id, 2, all)
 
-  #vars_between_intercept
+  ########## vars between
   between_vars=attributes(D)$assign[vars_between_intercept_id]
   intercept=0%in%between_vars
   between_vars=unique(between_vars)
   between_vars_intercept<-
     between_vars<-attr(terms(formula),"term.labels")[between_vars]
   if(intercept)
-    between_vars_intercept=c("1",between_vars_intercept)
+    between_vars_intercept=c("1",between_vars_intercept) else
+      between_vars_intercept=c("0",between_vars_intercept)
 
-  # formula_preds=paste(collapse = "+",between_vars)
-  # formula_preds_between_intercept=paste0(formula[[2]],formula[[1]],formula_preds)
+  # vars between
+  between_dummy_vars_intercept=names(vars_between_intercept_id)[vars_between_intercept_id]
+  #  between_dummy_vars_intercept=gsub("^\\(Intercept\\)$","1",between_dummy_vars_intercept)
+  id_intercept=grep("^\\(Intercept\\)$",between_dummy_vars_intercept)
+  if(length(id_intercept)>0)
+    between_dummy_vars_intercept=between_dummy_vars_intercept[
+      -id_intercept]
 
-  # data_intercept=data[,between_vars]
 
 
-
-  ############# within variables
+  # ############# within variables
   within_vars=attributes(D)$assign[!vars_between_intercept_id]
   within_vars=unique(within_vars)
   within_vars_all=attr(terms(formula),"term.labels")[within_vars]
@@ -175,23 +189,43 @@ out <- reformulate(labels(terms(FUN)), FUN[[2]])
   within_vars=gsub("^:","",within_vars)
   within_vars=unique(within_vars)
 
-  ############# others between variables
-  vars_between=lapply(within_vars, function(x) {
+  within_dummy_vars_all=names(vars_between_intercept_id)[!vars_between_intercept_id]
+  within_dummy_vars=within_dummy_vars_all
+  for(x in between_dummy_vars_intercept)
+    within_dummy_vars=gsub(paste0("(^|:)",x,"($|:)"),"",within_dummy_vars)
+  within_dummy_vars=gsub(":$","",within_dummy_vars)
+  within_dummy_vars=gsub("^:","",within_dummy_vars)
+  within_dummy_vars=unique(within_dummy_vars)
+
+
+  ############# DUMMY predictor between variables for within coefficients
+  pred_vars_between_dummy=lapply(within_dummy_vars, function(x) {
     # temp=within_vars_all[grep(x,within_vars_all)]
-    temp=gsub(paste0(x,"(:|)"),"",within_vars_all)
+    x_is_in=grep(paste0("(:|^)",x,"(:|$)"),within_dummy_vars_all)
+    temp=gsub(paste0(x,"(:|)"),"",within_dummy_vars_all[x_is_in])
     temp=gsub(":$","",temp)
-    if(any(temp=="")) temp[temp==""]="1"
-    setdiff(temp,within_vars_all)
+    if(any(temp=="")) temp=temp[temp!=""]
+    #setdiff(temp,within_dummy_vars)
+    temp
   })
   #vars_between=lapply(vars_between,function(x)gsub(":$","",x))
-  names(vars_between)=within_vars
+  names(pred_vars_between_dummy)=within_dummy_vars
 
-  temp=list(".Intercept."=between_vars_intercept)
-  vars_between=c(temp,vars_between)
+  ########TODO: controllare qui
+  # NON QUI between_dummy_vars_intercept=    c(ifelse(intercept,"1","0"),between_dummy_vars_intercept)
 
+  if(intercept){
+    temp=list(".Intercept."=between_dummy_vars_intercept)
+    pred_vars_between_dummy=c(temp,pred_vars_between_dummy)
+  }
 
+  ###################
   list(vars_within=within_vars,
-       vars_between=vars_between)
+       #pred_vars_between=pred_vars_between,
+       #vars_within_dummy=within_dummy_vars_intercept,
+       pred_vars_between_dummy=pred_vars_between_dummy,
+       data=data,
+       cluster=cluster)
 }
 
 is.constant <- function(x) length(unique(x)) == 1

@@ -40,15 +40,17 @@
 #' @seealso \code{\link[flipscores]{flipscores}}
 #'
 #' @import flipscores
+#' @import stats
+#' @import jointest
 #'
 #' @examples
-#' \dontrun{
+#' library(remmm)
 #' df <- data.frame(y = rnorm(100), x = rnorm(100), id = rep(1:20, each = 5))
-#' V  <- diag(100)  # placeholder; depends on whiten_mf_from_V()
+#' V  <- diag(100)
 #' out <- clip(y ~ x, data = df, n_flips = 999, alternative = "two.sided",
 #'             id = "id", seed = 1, covhat = V)
 #' out$summary_table
-#' }
+#'
 #'
 #' @export
 clip <- function(formula, data, n_flips = 5000, alternative= "two.sided", id, seed = NULL, covhat = NULL){
@@ -70,7 +72,7 @@ clip <- function(formula, data, n_flips = 5000, alternative= "two.sided", id, se
     id <- df[[id]]
   }
 
-  flips <- flipscores:::.make_flips(n_obs = n_obs, n_flips = n_flips, id = id)
+  flips <- .make_flips(n_obs = n_obs, n_flips = n_flips, id = id)
 
   y_names <- vapply(formula_list, function(f) as.character(f[[2]]), character(1))
 
@@ -92,15 +94,15 @@ clip <- function(formula, data, n_flips = 5000, alternative= "two.sided", id, se
       flips = flips,
       alternative = alternative
     )
-    temp$summary_table <- jointest:::.get_summary_table_from_flipscores(temp)
+    temp$summary_table <- .get_summary_table_from_flipscores(temp)
     temp
   })
 
   names(mods) <- y_names
 
   out <- list(
-    Tspace = jointest:::.get_all_Tspace(mods),
-    summary_table = jointest:::.get_all_summary_table(mods),
+    Tspace = .get_all_Tspace(mods),
+    summary_table = .get_all_summary_table(mods),
     mods = mods,
     call = match.call()
   )
