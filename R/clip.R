@@ -62,6 +62,8 @@ clip <- function(formula, data, cluster, n_flips = 5000, alternative= "two.sided
 
   y_names <- vapply(formula_list, function(f) as.character(f[[2]]), character(1))
 
+  if(is.null(V)){V <- diag(n_obs)}
+
   mods <- lapply(seq_len(m), function(x){
 
     unique_ids <- unique(cluster_col)
