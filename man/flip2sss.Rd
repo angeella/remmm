@@ -83,7 +83,7 @@ summary(jointest::combine_contrasts(res))
 Andreella, A., Goeman, J., Hemerik, J., Finos, L. (2025). Robust Inference for Generalized Linear Mixed Models: A “Two-Stage Summary Statistics” Approach Based on Score Sign Flipping. Psychometrika, 1-23. doi: 10.1017/psy.2024.22
 }
 \seealso{
-\code{\link{combine_contrasts}}, \code{\link{combine}}
+\code{\link{combine}}, \code{\link{combine_contrasts}}
 }
 \author{
 Livio Finos, Angela Andreella

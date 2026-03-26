@@ -1,5 +1,6 @@
-#' Simulate multivariate hierarchical data with correlated residuals
+#' @title Simulate multivariate hierarchical data
 #'
+#' @description
 #' Generates multivariate hierarchical data with \eqn{m} outcomes, cluster-level
 #' random effects, and correlated residual errors across outcomes.
 #'
@@ -21,7 +22,7 @@
 #'   \itemize{
 #'     \item \code{"autocorrelation"}: AR(1)-like structure with correlation \code{rho},
 #'     \item \code{"equicorrelation"}: constant correlation \code{rho},
-#'     \item \code{"casuale"}: random positive-definite matrix,
+#'     \item \code{"random"}: random positive-definite matrix,
 #'     \item or a numeric covariance matrix.
 #'   }
 #' @param rho Correlation parameter used when \code{Sigma} is
@@ -38,20 +39,6 @@
 #'   across outcomes; otherwise outcome-specific random effects are generated.
 #' @param shared_fe Logical; if \code{TRUE}, covariates \code{X} and \code{Z}
 #'   are shared across outcomes; otherwise outcome-specific covariates are generated.
-#'
-#' @details
-#' Residual errors are simulated from a multivariate normal distribution with
-#' covariance matrix \code{Sigma}. When:
-#'
-#' \itemize{
-#'   \item \code{"autocorrelation"} is specified, the covariance matrix has entries
-#'         \eqn{\rho^{|i-j|}} scaled by \code{sd_eps}.
-#'   \item \code{"equicorrelation"} is specified, all off-diagonal entries equal
-#'         \code{rho}, with diagonal entries equal to \code{sd_eps^2}.
-#' }
-#'
-#' Cluster-level random effects are drawn from a trivariate normal distribution
-#' with variance \code{sd_within^2} on the diagonal.
 #'
 #' @return A list of length \eqn{m}. Each element is a \code{data.frame} with columns:
 #' \describe{
@@ -113,7 +100,7 @@ simulateData <- function(Sigma, rho,
       diag(Sigma) <- sd_eps^2
     }else{
 
-      if(Sigma == "casuale"){
+      if(Sigma == "random"){
         A <- matrix(runif(m^2)*2-1, ncol=m)
         Sigma <- t(A) %*% A
       }else{
@@ -121,8 +108,6 @@ simulateData <- function(Sigma, rho,
       }
     }
   }
-
-  #array number of obs x var (id, X, Z, U, RX, RZ, eps) x outcomes
 
   db <- array(NA, dim = c(sum(nJ), 7, m))
 

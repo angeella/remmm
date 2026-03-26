@@ -2,7 +2,7 @@
 % Please edit documentation in R/simulateData.R
 \name{simulateData}
 \alias{simulateData}
-\title{Simulate multivariate hierarchical data with correlated residuals}
+\title{Simulate multivariate hierarchical data}
 \usage{
 simulateData(
   Sigma,
@@ -23,7 +23,7 @@ simulateData(
 \itemize{
   \item \code{"autocorrelation"}: AR(1)-like structure with correlation \code{rho},
   \item \code{"equicorrelation"}: constant correlation \code{rho},
-  \item \code{"casuale"}: random positive-definite matrix,
+  \item \code{"random"}: random positive-definite matrix,
   \item or a numeric covariance matrix.
 }}
 
@@ -70,8 +70,7 @@ The returned list contains two attributes:
 \description{
 Generates multivariate hierarchical data with \eqn{m} outcomes, cluster-level
 random effects, and correlated residual errors across outcomes.
-}
-\details{
+
 For each outcome \eqn{i = 1, \dots, m}, the response is generated as:
 
 \deqn{
@@ -85,20 +84,6 @@ where:
   \item \eqn{\varepsilon} follows a multivariate normal distribution
         with covariance matrix \code{Sigma}.
 }
-
-
-Residual errors are simulated from a multivariate normal distribution with
-covariance matrix \code{Sigma}. When:
-
-\itemize{
-  \item \code{"autocorrelation"} is specified, the covariance matrix has entries
-        \eqn{\rho^{|i-j|}} scaled by \code{sd_eps}.
-  \item \code{"equicorrelation"} is specified, all off-diagonal entries equal
-        \code{rho}, with diagonal entries equal to \code{sd_eps^2}.
-}
-
-Cluster-level random effects are drawn from a trivariate normal distribution
-with variance \code{sd_within^2} on the diagonal.
 }
 \examples{
 \dontrun{

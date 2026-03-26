@@ -2,73 +2,57 @@
 % Please edit documentation in R/clip.R
 \name{clip}
 \alias{clip}
-\title{Clusterwise sign-flipping score test}
+\title{Cluster wise sign-flipping score test}
 \usage{
-clip(
-  formula,
-  data,
-  n_flips = 5000,
-  alternative = "two.sided",
-  id,
-  seed = NULL,
-  covhat = NULL
-)
+clip(formula, data, cluster,
+n_flips = 5000, alternative= "two.sided", seed = NULL, V = NULL)
 }
 \arguments{
 \item{formula}{A model \code{\link{formula}}. For multivariate outcomes, \code{formula}
 may refer to a matrix response in \code{data} (as in \code{\link[stats]{lm}})
-or to a column in \code{data} handled by \code{make_formula_list()}.}
+or to a column in \code{data}.}
 
 \item{data}{A \code{data.frame} containing the variables referenced in \code{formula}.}
 
-\item{n_flips}{Integer. Number of flips/permutations to generate.}
+\item{cluster}{Cluster identifier. Character string naming the clustering column in \code{data}.}
 
-\item{alternative}{Character string specifying the alternative hypothesis.
-Typically one of \code{"two.sided"}, \code{"greater"}, \code{"less"}.}
+\item{n_flips}{Integer. Number of flips to generate. Default is 5000.}
 
-\item{id}{Cluster identifier. Either (i) a vector of cluster ids of length \code{nrow(data)},
-or (ii) a single character string naming the clustering column in \code{data}.}
+\item{alternative}{Character string specifying the alternative hypothesis used to test the fixed effect
+coefficients. One of \code{"two.sided"}, \code{"greater"}, \code{"less"}.
+Default is \code{"two.sided"}.}
 
-\item{seed}{Optional integer seed for reproducibility. If not \code{NULL},
-\code{set.seed(seed)} is called at the beginning of the function.}
+\item{seed}{Optional integer seed for reproducibility.}
 
-\item{covhat}{Covariance object passed to \code{whiten_mf_from_V()} as \code{V}.
-It can be a single matrix (univariate case) or a list of matrices (one per outcome),
-depending on the expected input of \code{whiten_mf_from_V()}.}
+\item{V}{Working covariance matrix to be used inside the score contributions.
+It can be a single matrix (univariate case, one response) or a list of matrices (one per outcome).
+Default is NULL, i.e., identity matrix.}
 }
 \value{
-An object of class \code{"jointest"} (a list) with components:
+A \code{jointest} object, i.e., a list containing the following objects:
 \describe{
-  \item{Tspace}{Aggregated test-statistic space computed from all equations.}
-  \item{summary_table}{Aggregated summary table across equations.}
-  \item{mods}{Named list of per-equation \code{flipscores} objects (names are response variables).}
+  \item{Tspace}{\code{data.frame} where rows represents the sign-flipping transformed (plus the identity one) test and columns the variables.}
+  \item{summary_table}{\code{data.frame} containing for each model the estimated parameter(s), score(s), std error(s), test(s), partial correlation(s) and p-value(s).}
+  \item{mods}{List of \code{flipscores} objects, one for each outcome.}
   \item{call}{The matched call.}
 }
 }
 \description{
-Implements a *clusterwise sign-flipping score-based test* for one or multiple outcomes
-under within-cluster dependence (i.e., non-independent observations), as in
-linear mixed-model–like settings.
-}
-\details{
-The function first expands \code{formula} into a list of equations via
-\code{make_formula_list()}. Flips are generated with \code{flipscores:::.make_flips()}
-using the supplied cluster identifier \code{id}. For each equation, the model frame
-is transformed/whitened via \code{whiten_mf_from_V()} using \code{covhat}, then
-\code{flipscores()} is run on the transformed data after removing the intercept
-(\code{. ~ . - 1}). Per-equation objects are stored in \code{mods} and aggregated
-summaries are returned in \code{Tspace} and \code{summary_table}.
+This function implements a *cluster wise sign-flipping score-based test* for
+one or multiple outcomes under within-cluster dependence (i.e., non-independent observations).
 }
 \examples{
 library(remmm)
 df <- data.frame(y = rnorm(100), x = rnorm(100), id = rep(1:20, each = 5))
 V  <- diag(100)
-out <- clip(y ~ x, data = df, n_flips = 999, alternative = "two.sided",
-            id = "id", seed = 1, covhat = V)
-out$summary_table
+out <- clip(y ~ x, data = df, cluster = "id", V = V)
+summary(out)
 
 
 }
 \seealso{
 \code{\link[flipscores]{flipscores}}
+}
+\author{
+Angela Andreella
 }

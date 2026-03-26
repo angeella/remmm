@@ -1,6 +1,6 @@
 Package: remmm
 Type: Package
-Title: Resampling-based multivariate mixed model infenrence
+Title: Resampling-based multivariate mixed model inference
 Version: 0.1.0
 Authors@R: c(
     person(
@@ -10,8 +10,9 @@ Authors@R: c(
     ), person("Livio", "Finos", role = "aut")
   )
 Description: Fits resampling-based multivariate mixed models for data with within-cluster dependence,
-  including multivariate responses, using generalized linear mixed models. The method is described in
-  Andreella and Finos (2026).
+  including multivariate responses. The approach makes inference on fixed effects by a score test
+  where the null distribution is computed by sign-flipping transformation exploiting within-cluster
+  dependence and between-responses correlation. The method is described in Andreella and Finos (2026).
 Imports: flipscores, jointest, MASS, methods
 License: GPL (>= 3)
 Encoding: UTF-8
