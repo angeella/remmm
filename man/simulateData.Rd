@@ -5,17 +5,15 @@
 \title{Simulate multivariate hierarchical data}
 \usage{
 simulateData(
-  Sigma,
-  rho,
+  Sigma = "equicorrelation",
+  rho = 0.5,
   beta,
   gamma,
   J,
   nJ,
-  sd_within,
-  seed,
-  sd_eps,
-  shared_re = TRUE,
-  shared_fe = TRUE
+  sd_within = 1,
+  seed = 1234,
+  sd_eps = 1
 )
 }
 \arguments{
@@ -23,12 +21,12 @@ simulateData(
 \itemize{
   \item \code{"autocorrelation"}: AR(1)-like structure with correlation \code{rho},
   \item \code{"equicorrelation"}: constant correlation \code{rho},
-  \item \code{"random"}: random positive-definite matrix,
   \item or a numeric covariance matrix.
-}}
+}
+Default \code{"equicorrelation"}.}
 
 \item{rho}{Correlation parameter used when \code{Sigma} is
-\code{"autocorrelation"} or \code{"equicorrelation"}.}
+\code{"autocorrelation"} or \code{"equicorrelation"}. Default \code{0.5}.}
 
 \item{beta}{Numeric vector of length \eqn{m}; outcome-specific slopes for \code{X}.}
 
@@ -38,38 +36,33 @@ simulateData(
 
 \item{nJ}{Integer vector of length \code{J}; number of observations per cluster.}
 
-\item{sd_within}{Numeric; standard deviation of cluster-level random effects}
+\item{sd_within}{Numeric; standard deviation of cluster-level random effects.
+Default \code{1}.}
 
-\item{seed}{Integer; random seed for reproducibility.}
+\item{seed}{Integer; random seed for reproducibility. Default \code{1234}.}
 
-\item{sd_eps}{Numeric; marginal standard deviation used to scale the diagonal
-of the residual covariance matrix \code{Sigma}.}
-
-\item{shared_re}{Logical; if \code{TRUE}, the same random effects are shared
-across outcomes; otherwise outcome-specific random effects are generated.}
-
-\item{shared_fe}{Logical; if \code{TRUE}, covariates \code{X} and \code{Z}
-are shared across outcomes; otherwise outcome-specific covariates are generated.}
+\item{sd_eps}{Numeric; marginal standard deviation of the residual errors.
+Default \code{1}.}
 }
 \value{
-A list of length \eqn{m}. Each element is a \code{data.frame} with columns:
+A single \code{data.frame} with columns:
 \describe{
   \item{\code{id}}{Cluster identifier}
-  \item{\code{X}, \code{Z}}{Fixed-effect covariates}
-  \item{\code{U}, \code{RX}, \code{RZ}}{Random effects}
-  \item{\code{eps}}{Residual term}
-  \item{\code{y}}{Generated outcome}
+  \item{\code{X}, \code{Z}}{Shared fixed-effect covariates}
+  \item{\code{U}, \code{RX}, \code{RZ}}{Shared random effects}
+  \item{\code{eps}}{Matrix column of residual terms, one column per outcome}
+  \item{\code{Y}}{Matrix column of responses, one column per outcome}
 }
 
-The returned list contains two attributes:
+The returned data frame contains two attributes:
 \describe{
   \item{\code{Sigma_eps_true}}{True residual covariance matrix}
   \item{\code{Sigma_random_true}}{True random-effects covariance matrix}
 }
 }
 \description{
-Generates multivariate hierarchical data with \eqn{m} outcomes, cluster-level
-random effects, and correlated residual errors across outcomes.
+Generates multivariate hierarchical data with \eqn{m} outcomes, shared
+cluster-level random effects, and correlated residual errors across outcomes.
 
 For each outcome \eqn{i = 1, \dots, m}, the response is generated as:
 
@@ -79,32 +72,16 @@ y_i = X \beta_i + Z \gamma + U + RX \cdot X + RZ \cdot Z + \varepsilon_i
 
 where:
 \itemize{
-  \item \eqn{X} and \eqn{Z} are fixed-effect covariates,
-  \item \eqn{U}, \eqn{RX}, \eqn{RZ} are cluster-level random effects,
+  \item \eqn{X} and \eqn{Z} are shared fixed-effect covariates,
+  \item \eqn{U}, \eqn{RX}, \eqn{RZ} are shared cluster-level random effects,
   \item \eqn{\varepsilon} follows a multivariate normal distribution
         with covariance matrix \code{Sigma}.
 }
 }
 \examples{
-\dontrun{
-library(MASS)
+db <- simulateData(Sigma = "equicorrelation", rho = 0.5, beta = c(0.5, 1.2), gamma = 0.8,
+  J = 8, nJ = rep(25, 8))
 
-db <- simulateData(
-  Sigma = "equicorrelation",
-  rho = 0.4,
-  beta = c(0.5, 1.2),
-  gamma = 0.8,
-  J = 8,
-  nJ = rep(25, 8),
-  sd_within = 1,
-  seed = 123,
-  sd_eps = 1,
-  shared_re = TRUE,
-  shared_fe = TRUE
-)
-
-str(db[[1]])
-attributes(db)
-}
+str(db)
 
 }

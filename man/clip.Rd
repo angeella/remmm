@@ -5,7 +5,7 @@
 \title{Cluster wise sign-flipping score test}
 \usage{
 clip(formula, data, cluster,
-n_flips = 5000, alternative= "two.sided", seed = NULL, V = NULL)
+n_flips = 1000, alternative= "two.sided", seed = 1234, V = NULL)
 }
 \arguments{
 \item{formula}{A model \code{\link{formula}}. For multivariate outcomes, \code{formula}
@@ -22,7 +22,7 @@ or to a column in \code{data}.}
 coefficients. One of \code{"two.sided"}, \code{"greater"}, \code{"less"}.
 Default is \code{"two.sided"}.}
 
-\item{seed}{Optional integer seed for reproducibility.}
+\item{seed}{Optional integer seed for reproducibility. Default 1234.}
 
 \item{V}{Working covariance matrix to be used inside the score contributions.
 It can be a single matrix (univariate case, one response) or a list of matrices (one per outcome).
@@ -43,12 +43,16 @@ one or multiple outcomes under within-cluster dependence (i.e., non-independent 
 }
 \examples{
 library(remmm)
-df <- data.frame(y = rnorm(100), x = rnorm(100), id = rep(1:20, each = 5))
-V  <- diag(100)
-out <- clip(y ~ x, data = df, cluster = "id", V = V)
-summary(out)
+db <- simulateData(Sigma = "equicorrelation", rho = 0.5, beta = c(0.5, 1.2), gamma = 0.8,
+  J = 8, nJ = rep(25, 8))
 
+str(db)
 
+fit <- clip(Y ~ X + Z, data = db,  cluster = "id")
+summary(jointest::p.adjust(fit))
+summary(jointest::combinetests(fit))
+summary(jointest::combinetests(fit, by="model"))
+summary(jointest::combinetests(fit, by="coefficient"))
 }
 \seealso{
 \code{\link[flipscores]{flipscores}}

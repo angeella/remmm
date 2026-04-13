@@ -59,9 +59,9 @@ res <- flip2sss(Y ~ Grp * X1 + X2, data=D,
                cluster=D$Subj, family="binomial")
 summary(res)
 # This is an ANOVA-like overall test:
-summary(combine(res))
+summary(jointest::combinetests(res))
 # This is an ANOVA-like test:
-summary(combine_contrasts(res))
+summary(jointest::combinecontrasts(res))
 
 # An alternative and more flexible definition of the model:
 # Define the summary statistics
@@ -75,15 +75,15 @@ summary(res)
 
 # We can also combine the tests:
 # Overall:
-summary(jointest::combine(res))
+summary(jointest::combinetests(res))
 # This is similar to an ANOVA test:
-summary(jointest::combine_contrasts(res))
+summary(jointest::combinecontrasts(res))
 }
 \references{
 Andreella, A., Goeman, J., Hemerik, J., Finos, L. (2025). Robust Inference for Generalized Linear Mixed Models: A “Two-Stage Summary Statistics” Approach Based on Score Sign Flipping. Psychometrika, 1-23. doi: 10.1017/psy.2024.22
 }
 \seealso{
-\code{\link{combine}}, \code{\link{combine_contrasts}}
+\code{\link[jointest:combinetests]{combinetests}}, \code{\link[jointest:combinecontrasts]{combinecontrasts}}
 }
 \author{
 Livio Finos, Angela Andreella

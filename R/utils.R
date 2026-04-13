@@ -56,7 +56,9 @@ safe_model_frame <- function(formula, data, ...) {
     }
   }
 
-  model.frame(formula, data = data, ...)
+  data_safe <-cbind(data[, vars[1]], model.matrix(formula, data = data))
+  colnames(data_safe)[1] <- vars[1]
+  data_safe
 }
 
 

@@ -1,8 +1,8 @@
 #' @title Simulate multivariate hierarchical data
 #'
 #' @description
-#' Generates multivariate hierarchical data with \eqn{m} outcomes, cluster-level
-#' random effects, and correlated residual errors across outcomes.
+#' Generates multivariate hierarchical data with \eqn{m} outcomes, shared
+#' cluster-level random effects, and correlated residual errors across outcomes.
 #'
 #' For each outcome \eqn{i = 1, \dots, m}, the response is generated as:
 #'
@@ -12,8 +12,8 @@
 #'
 #' where:
 #' \itemize{
-#'   \item \eqn{X} and \eqn{Z} are fixed-effect covariates,
-#'   \item \eqn{U}, \eqn{RX}, \eqn{RZ} are cluster-level random effects,
+#'   \item \eqn{X} and \eqn{Z} are shared fixed-effect covariates,
+#'   \item \eqn{U}, \eqn{RX}, \eqn{RZ} are shared cluster-level random effects,
 #'   \item \eqn{\varepsilon} follows a multivariate normal distribution
 #'         with covariance matrix \code{Sigma}.
 #' }
@@ -22,165 +22,126 @@
 #'   \itemize{
 #'     \item \code{"autocorrelation"}: AR(1)-like structure with correlation \code{rho},
 #'     \item \code{"equicorrelation"}: constant correlation \code{rho},
-#'     \item \code{"random"}: random positive-definite matrix,
 #'     \item or a numeric covariance matrix.
 #'   }
+#'   Default \code{"equicorrelation"}.
 #' @param rho Correlation parameter used when \code{Sigma} is
-#'   \code{"autocorrelation"} or \code{"equicorrelation"}.
+#'   \code{"autocorrelation"} or \code{"equicorrelation"}. Default \code{0.5}.
 #' @param beta Numeric vector of length \eqn{m}; outcome-specific slopes for \code{X}.
 #' @param gamma Numeric scalar; common slope for \code{Z} across outcomes.
 #' @param J Integer; number of clusters.
 #' @param nJ Integer vector of length \code{J}; number of observations per cluster.
-#' @param sd_within Numeric; standard deviation of cluster-level random effects
-#' @param seed Integer; random seed for reproducibility.
-#' @param sd_eps Numeric; marginal standard deviation used to scale the diagonal
-#'   of the residual covariance matrix \code{Sigma}.
-#' @param shared_re Logical; if \code{TRUE}, the same random effects are shared
-#'   across outcomes; otherwise outcome-specific random effects are generated.
-#' @param shared_fe Logical; if \code{TRUE}, covariates \code{X} and \code{Z}
-#'   are shared across outcomes; otherwise outcome-specific covariates are generated.
+#' @param sd_within Numeric; standard deviation of cluster-level random effects.
+#'   Default \code{1}.
+#' @param seed Integer; random seed for reproducibility. Default \code{1234}.
+#' @param sd_eps Numeric; marginal standard deviation of the residual errors.
+#'   Default \code{1}.
 #'
-#' @return A list of length \eqn{m}. Each element is a \code{data.frame} with columns:
+#' @return A single \code{data.frame} with columns:
 #' \describe{
 #'   \item{\code{id}}{Cluster identifier}
-#'   \item{\code{X}, \code{Z}}{Fixed-effect covariates}
-#'   \item{\code{U}, \code{RX}, \code{RZ}}{Random effects}
-#'   \item{\code{eps}}{Residual term}
-#'   \item{\code{y}}{Generated outcome}
+#'   \item{\code{X}, \code{Z}}{Shared fixed-effect covariates}
+#'   \item{\code{U}, \code{RX}, \code{RZ}}{Shared random effects}
+#'   \item{\code{eps}}{Matrix column of residual terms, one column per outcome}
+#'   \item{\code{Y}}{Matrix column of responses, one column per outcome}
 #' }
 #'
-#' The returned list contains two attributes:
+#' The returned data frame contains two attributes:
 #' \describe{
 #'   \item{\code{Sigma_eps_true}}{True residual covariance matrix}
 #'   \item{\code{Sigma_random_true}}{True random-effects covariance matrix}
 #' }
 #'
 #' @examples
-#' \dontrun{
-#' library(MASS)
+#' db <- simulateData(Sigma = "equicorrelation", rho = 0.5, beta = c(0.5, 1.2), gamma = 0.8,
+#'   J = 8, nJ = rep(25, 8))
 #'
-#' db <- simulateData(
-#'   Sigma = "equicorrelation",
-#'   rho = 0.4,
-#'   beta = c(0.5, 1.2),
-#'   gamma = 0.8,
-#'   J = 8,
-#'   nJ = rep(25, 8),
-#'   sd_within = 1,
-#'   seed = 123,
-#'   sd_eps = 1,
-#'   shared_re = TRUE,
-#'   shared_fe = TRUE
-#' )
-#'
-#' str(db[[1]])
-#' attributes(db)
-#' }
+#' str(db)
 #'
 #' @importFrom MASS mvrnorm
 #' @export
 
-
-simulateData <- function(Sigma, rho,
+simulateData <- function(Sigma = "equicorrelation", rho = 0.5,
                          beta, gamma,
-                         J, nJ, sd_within,
-                         seed, sd_eps,
-                         shared_re = TRUE, shared_fe = TRUE){
+                         J, nJ, sd_within = 1,
+                         seed = 1234, sd_eps = 1) {
 
   set.seed(seed)
 
   m <- length(beta)
+  N <- sum(nJ)
 
-  if(Sigma == "autocorrelation"){
-    Sigma <- outer(1:m, 1:m, function(i, j) rho^abs(i - j))
-    diag(Sigma) <- sd_eps
-  }else{
-    if(Sigma == "equicorrelation"){
-      Sigma <- matrix(rho, m, m)
-      diag(Sigma) <- sd_eps^2
-    }else{
+  if (length(nJ) != J) {
+    stop("length(nJ) must be equal to J")
+  }
 
-      if(Sigma == "random"){
-        A <- matrix(runif(m^2)*2-1, ncol=m)
-        Sigma <- t(A) %*% A
-      }else{
-        Sigma <- diag(m)
+  if (!is.matrix(Sigma)) {
+
+    if (!Sigma %in% c("autocorrelation", "equicorrelation")) {
+      stop("Sigma must be either a covariance matrix, 'autocorrelation', or 'equicorrelation'")
+    }
+
+    if (Sigma == "autocorrelation") {
+      if (abs(rho) >= 1) {
+        stop("For 'autocorrelation', rho must satisfy |rho| < 1")
       }
+      Sigma <- sd_eps^2 * outer(1:m, 1:m, function(i, j) rho^abs(i - j))
+    }
+
+    if (Sigma == "equicorrelation") {
+      if (rho <= -1 / (m - 1) || rho >= 1) {
+        stop("For 'equicorrelation', rho must satisfy -1/(m-1) < rho < 1")
+      }
+      Sigma <- matrix(rho * sd_eps^2, m, m)
+      diag(Sigma) <- sd_eps^2
+    }
+
+  } else {
+    if (!all(dim(Sigma) == c(m, m))) {
+      stop("Numeric Sigma must be an m x m covariance matrix")
     }
   }
 
-  db <- array(NA, dim = c(sum(nJ), 7, m))
+  id <- rep(seq_len(J), times = nJ)
 
-  db[,1,] <- rep(seq(J), times = nJ)
+  Sigma_fixed <- matrix(c(1, 0.7,
+                          0.7, 1), ncol = 2)
 
+  fixed_effects <- MASS::mvrnorm(N, mu = c(0, 0), Sigma = Sigma_fixed)
+  X <- fixed_effects[, 1]
+  Z <- fixed_effects[, 2]
 
-  if(shared_fe){
-    Sigma_fixed <- matrix(c(1, 0.7, 0.7, 1), ncol = 2)
+  E <- mvrnorm(N, mu = rep(0, m), Sigma = Sigma)
+  colnames(E) <- paste0("eps", seq_len(m))
 
-    fixed_effects <- mvrnorm(nrow(db[,,1]), rep(0, 2),
-                             Sigma = Sigma_fixed)
+  R_random <- matrix(0.5, 3, 3)
+  diag(R_random) <- 1
+  Sigma_random <- sd_within^2 * R_random
 
-    db[,2,] <- matrix(rep(fixed_effects[,1],m), ncol = m)
-    db[,3,] <- matrix(rep(fixed_effects[,2],m), ncol = m)
-    db[,7,] <- mvrnorm(nrow(db), c(rep(0, m)), Sigma)
+  random_effects <- mvrnorm(J, mu = c(0, 0, 0), Sigma = Sigma_random)
 
-  }else{
-    Sigma_fixed <- matrix(0.7, 2*m, 2*m)
-    diag(Sigma_fixed) <- 1
+  U  <- random_effects[id, 1]
+  RX <- random_effects[id, 2]
+  RZ <- random_effects[id, 3]
 
-    fixed_effects <- mvrnorm(nrow(db[,,1]), rep(0, 2*m),
-                             Sigma = Sigma_fixed)
+  mean_common <- U + RX * X + RZ * Z + gamma * Z
+  Y <- sweep(X %o% beta + E, 1, mean_common, FUN = "+")
+  colnames(Y) <- paste0("y", seq_len(m))
 
-    db[,2,] <- fixed_effects[,1:m]
-    db[,3,] <- fixed_effects[,(m+1):(2*m)]
+  db <- data.frame(
+    id = id,
+    X = X,
+    Z = Z,
+    U = U,
+    RX = RX,
+    RZ = RZ
+  )
 
-    db[,7,] <- mvrnorm(nrow(db), c(rep(0, m)), Sigma)
+  db$eps <- I(E)
+  db$Y <- I(Y)
 
-  }
+  attr(db, "Sigma_eps_true") <- Sigma
+  attr(db, "Sigma_random_true") <- Sigma_random
 
-  Sigma_random <- matrix(c(sd_within^2, 0.5, 0.5,
-                           0.5, sd_within^2, 0.5,
-                           0.5, 0.5, sd_within^2),
-                         ncol = 3, nrow = 3)
-
-  if(shared_re){
-
-    random_effects <- mvrnorm(J, c(0,0,0),
-                              Sigma = Sigma_random)
-
-
-    db[,4,] <- matrix(rep(random_effects[db[,1,1], 1], m), ncol = m)
-    db[,5,] <- matrix(rep(random_effects[db[,1,1], 2], m), ncol = m)
-    db[,6,] <- matrix(rep(random_effects[db[,1,1], 3], m), ncol = m)
-
-
-  }else{
-
-    for(i in seq_len(m)){
-      random_effects <- mvrnorm(J, c(0,0,0),
-                                Sigma = Sigma_random)
-
-      db[,4,i] <- random_effects[db[,1,1], 1]
-      db[,5,i] <- random_effects[db[,1,1], 2]
-      db[,6,i] <- random_effects[db[,1,1], 3]
-
-    }
-
-
-  }
-
-  db_list <- list()
-  for( i in seq_len(m)){
-
-    db_list[[i]] <- data.frame(db[,,i])
-    colnames(db_list[[i]]) <- c("id", "X", "Z", "U", "RX", "RZ", "eps")
-    db_list[[i]]$y <- db_list[[i]]$X * beta[i] + db_list[[i]]$Z * gamma+
-      db_list[[i]]$U + db_list[[i]]$RX * db_list[[i]]$X +
-      db_list[[i]]$RZ * db_list[[i]]$Z  + db_list[[i]]$eps
-  }
-
-  attr(db_list, "Sigma_eps_true") <- Sigma
-  attr(db_list, "Sigma_random_true")   <- Sigma_random
-
-  return(db_list)
+  db
 }

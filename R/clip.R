@@ -2,7 +2,7 @@
 #' @description This function implements a *cluster wise sign-flipping score-based test* for
 #' one or multiple outcomes under within-cluster dependence (i.e., non-independent observations).
 #' @usage clip(formula, data, cluster,
-#' n_flips = 5000, alternative= "two.sided", seed = NULL, V = NULL)
+#' n_flips = 1000, alternative= "two.sided", seed = 1234, V = NULL)
 #' @param formula A model \code{\link{formula}}. For multivariate outcomes, \code{formula}
 #'   may refer to a matrix response in \code{data} (as in \code{\link[stats]{lm}})
 #'   or to a column in \code{data}.
@@ -12,7 +12,7 @@
 #' @param alternative Character string specifying the alternative hypothesis used to test the fixed effect
 #' coefficients. One of \code{"two.sided"}, \code{"greater"}, \code{"less"}.
 #' Default is \code{"two.sided"}.
-#' @param seed Optional integer seed for reproducibility.
+#' @param seed Optional integer seed for reproducibility. Default 1234.
 #' @param V Working covariance matrix to be used inside the score contributions.
 #' It can be a single matrix (univariate case, one response) or a list of matrices (one per outcome).
 #' Default is NULL, i.e., identity matrix.
@@ -26,21 +26,25 @@
 #'
 #' @seealso \code{\link[flipscores]{flipscores}}
 #'
-#' @import flipscores
-#' @import stats
+#' @importFrom flipscores flipscores
 #' @import jointest
+#' @import stats
 #' @author Angela Andreella
 #' @examples
 #' library(remmm)
-#' df <- data.frame(y = rnorm(100), x = rnorm(100), id = rep(1:20, each = 5))
-#' V  <- diag(100)
-#' out <- clip(y ~ x, data = df, cluster = "id", V = V)
-#' summary(out)
+#' db <- simulateData(Sigma = "equicorrelation", rho = 0.5, beta = c(0.5, 1.2), gamma = 0.8,
+#'   J = 8, nJ = rep(25, 8))
 #'
+#' str(db)
 #'
+#' fit <- clip(Y ~ X + Z, data = db,  cluster = "id")
+#' summary(jointest::p.adjust(fit))
+#' summary(jointest::combinetests(fit))
+#' summary(jointest::combinetests(fit, by="model"))
+#' summary(jointest::combinetests(fit, by="coefficient"))
 #' @export
 #'
-clip <- function(formula, data, cluster, n_flips = 5000, alternative= "two.sided", seed = NULL, V = NULL){
+clip <- function(formula, data, cluster, n_flips = 1000, alternative= "two.sided", seed = 1234, V = NULL){
 
   if(!is.null(seed)) set.seed(seed)
 
@@ -73,8 +77,8 @@ clip <- function(formula, data, cluster, n_flips = 5000, alternative= "two.sided
 
     data_star <- as.data.frame(out$mf_star)
 
-    formula_up <- update(formula_list[[x]], . ~ . - 1)
-
+    resp <- all.vars(formula_list[[x]])[1]
+    formula_up <- as.formula(paste(resp, "~ . - 1"))
     temp <- flipscores(
       formula = formula_up,
       data    = data_star,
