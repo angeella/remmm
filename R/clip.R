@@ -39,9 +39,9 @@
 #'
 #' fit <- clip(Y ~ X + Z, data = db,  cluster = "id")
 #' summary(jointest::p.adjust(fit))
-#' summary(jointest::combinetests(fit))
-#' summary(jointest::combinetests(fit, by="model"))
-#' summary(jointest::combinetests(fit, by="coefficient"))
+#' summary(jointest::combine_tests(fit))
+#' summary(jointest::combine_tests(fit, by="model"))
+#' summary(jointest::combine_tests(fit, by="coefficient"))
 #' @export
 #'
 clip <- function(formula, data, cluster, n_flips = 1000, alternative= "two.sided", seed = 1234, V = NULL){

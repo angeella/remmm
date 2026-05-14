@@ -50,9 +50,9 @@ str(db)
 
 fit <- clip(Y ~ X + Z, data = db,  cluster = "id")
 summary(jointest::p.adjust(fit))
-summary(jointest::combinetests(fit))
-summary(jointest::combinetests(fit, by="model"))
-summary(jointest::combinetests(fit, by="coefficient"))
+summary(jointest::combine_tests(fit))
+summary(jointest::combine_tests(fit, by="model"))
+summary(jointest::combine_tests(fit, by="coefficient"))
 }
 \seealso{
 \code{\link[flipscores]{flipscores}}
