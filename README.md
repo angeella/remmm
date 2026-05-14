@@ -1,4 +1,4 @@
-<img src="sticker.png" align="right" alt="" width="200" />
+<img src="sticker.svg" align="right" alt="" width="200" />
 
 # remmm
 
