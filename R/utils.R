@@ -160,5 +160,145 @@ whiten_mf_from_V <- function(formula, data, V, id_col = NULL,
 
 
 
+.make_summary_table <- function(scores,Tspace,alternative){
+  p.values=apply(Tspace,2,.t2p_only_first, alternative)
+  data.frame(model=colnames(scores$scores),score= colSums(scores$scores),p.values=p.values)
+}
+
+
+.make_output_from_list_Tspace_summary_table <- function(res_list,original_call){
+  Tspace=lapply(res_list,function(x) x$Tspace)
+  summary_table=lapply(res_list,function(x) x$summary_table)
+  Tspace=do.call(cbind,Tspace)
+  summary_table=do.call(rbind,summary_table)
+  out=list(Tspace=Tspace,summary_table=summary_table,call = original_call)
+  class(out) <- c("remmm", class(out))
+  class(out) <- c("joint_flipscores", class(out))
+  return(out)
+}
+
+################
+
+.get_IH <- function (Z)
+{
+  diag(nrow(Z)) - .get_H(Z)
+}
+.get_H <- function (Z)
+{
+  Z %*% solve(t(Z) %*% Z) %*% t(Z)
+}
+
+#########
+#######################################
+#' @examples
+#' # example code
+#'
+#' # scores has only 3 rows
+#' scores <- matrix(
+#'   c(1, 2, 3, 4, 5, 6, 7, 8, 9),
+#'     nrow = 3,
+#'       dimnames = list(c("gene1", "gene3", "gene5"), c("S1", "S2", "S3"))
+#'       )
+#'       scores
+#'       #       S1 S2 S3
+#'       # gene1  1  4  7
+#'       # gene3  2  5  8
+#'       # gene5  3  6  9
+#'       # cluster_names has 5 elements — more than nrow(scores)
+#'       cluster_names <- c("gene1", "gene2", "gene3", "gene4", "gene5")
+#'
+#' result <- fill_scores_by_cluster(scores, cluster_names)
+#' result
+#' #       S1 S2 S3
+#' # gene1  1  4  7   # copied from scores
+#' # gene2  0  0  0   # not in scores → zeroed
+#' # gene3  2  5  8   # copied from scores
+#' # gene4  0  0  0   # not in scores → zeroed
+#' # gene5  3  6  9   # copied from scores
+#'
+#' cluster_names <- c("gene1", "gene3", "gene5")
+#'
+#' result <- fill_scores_by_cluster(scores, cluster_names)
+#' result
+#'
+fill_scores_by_cluster <- function(scores_A, cluster_names) {
+
+  # --- Input Validation ---
+  if (!is.matrix(scores_A$scores))
+    stop("'scores' must be a matrix.")
+  if (is.null(rownames(scores_A$scores)))
+    stop("'scores' matrix must have rownames.")
+  if (!is.character(cluster_names))
+    cluster_names=as.character(cluster_names)
+
+  # Warn if some cluster_names are not found in rownames(scores)
+  missing_names <- cluster_names[!cluster_names %in% rownames(scores_A$scores)]
+  if (length(missing_names) > 0){
+    # --- Build output matrix filled with zeros ---
+    # Rows = all cluster_names, Cols = same as scores
+    result_scores <- matrix(
+      0,
+      nrow     = length(cluster_names),
+      ncol     = ncol(scores_A$scores),
+      dimnames = list(cluster_names, colnames(scores_A$scores))
+    )
+    # --- Fill in rows that exist in scores ---
+    # Only copy rows whose names appear in cluster_names
+    matching_names <- cluster_names[cluster_names %in% rownames(scores_A$scores)]
+    result_scores[matching_names, ] <- scores_A$scores[matching_names, , drop = FALSE]
+
+    result_A <- matrix(
+      0,
+      nrow     = length(cluster_names),
+      ncol     = ncol(scores_A$A),
+      dimnames = list(cluster_names, colnames(scores_A$A))
+    )
+    result_A[matching_names, ] <- scores_A$A[matching_names, , drop = FALSE]
+
+    return(list(result_scores,result_A))
+  } else {
+    scores_A$scores=scores_A$scores[cluster_names,,drop=FALSE]
+    scores_A$A=scores_A$A[cluster_names,,drop=FALSE]
+    return(scores_A)
+  }
+}
+
+
+
+##################
+#' @examples
+#' # --- Example usage ---
+#' D <- data.frame(y1 = c(1, 2, 3, 4),
+#'                 y2 = 4:1,
+#'                 x = c(2, 4, 6, 8),
+#'                 z = c(1, 0, 1, 0))
+#'
+#' result <- formula_to_matrices(y1 ~ x + z, data = D)
+#' result
+#'
+#' result <- formula_to_matrices(cbind(y1,y2) ~ x * z, data = D)
+#' result
+#'
+#' result$Y  # response matrix
+#' result$X  # design matrix (x, z + intercept column)
+
+formula_to_matrices <- function(formula, data) {
+
+  # Build the model frame (handles NA, subset, etc.)
+  mf <- model.frame(formula, data = data)
+
+  # Right-hand side: design matrix (X), includes intercept by default
+  X <- model.matrix(formula, data = mf)
+
+  # Left-hand side: response matrix (Y)
+  Y <- model.response(mf)
+  if(is.vector(Y)) {
+    Y= as.matrix(Y)
+    colnames(Y)=as.character(formula[[2]])
+  }
+
+  list(Y = Y, X = X)
+}
+
 
 
