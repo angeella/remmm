@@ -1,8 +1,8 @@
 #' @title Cluster wise sign-flipping score test
 #' @description This function implements a *cluster wise sign-flipping score-based test* for
 #' one or multiple outcomes under within-cluster dependence (i.e., non-independent observations).
-#' @usage clip(formula, data, cluster,
-#' n_flips = 1000, alternative= "two.sided", seed = 1234)
+#' @usage clip(formula, data = NULL, cluster = NULL,
+#' n_flips = 5000, alternative= "two.sided", seed = 1234)
 #' @param formula One of:
 #'   \enumerate{
 #'     \item A \code{formula} object. For multivariate outcomes, \code{formula}
@@ -18,6 +18,7 @@
 #' coefficients. One of \code{"two.sided"}, \code{"greater"}, \code{"less"}.
 #' Default is \code{"two.sided"}.
 #' @param seed Optional integer seed for reproducibility. Default \code{NULL}.
+#' @param ... not implemented, yet.
 #' @return A \code{remm} object, i.e., a list containing the following objects:
 #' \describe{
 #'   \item{Tspace}{\code{data.frame} where rows represents the sign-flipping transformed (plus the identity one) test and columns the variables.}
@@ -28,6 +29,8 @@
 #' @seealso \code{\link[flipscores]{flipscores}}
 #'
 #' @importFrom flipscores flipscores
+#' @importFrom flipscores combine_tests
+#' @importFrom flipscores combine_contrasts
 #' @import stats
 #' @author Angela Andreella, Livio Finos
 #' @examples
@@ -47,15 +50,16 @@
 #' mods=list(lm(Y1~X1+X2+X3,data=D),lm(Y2~X1+X2+X3,data=D))
 #' res=clip(mods,data=D,cluster=cluster)
 #' summary(res)
-#' mods=list(list(Y1~X1+X2+X3,data=D,cluster=~cluster),
-#'           list(Y2~X1+X2+X3,data=D,cluster=~cluster))
-#' res=clip(mods,data=D)
+#' mods=list(list(formula=Y1~X1+X2+X3,data=D,cluster=cluster),
+#'           list(formula=Y2~X1+X2+X3,data=D,cluster=cluster))
+#' res=clip(mods)
 #' summary(res)
 #' summary(combine_tests(res))
 #' summary(combine_tests(res, by="model"))
 #' summary(combine_tests(res, by="coefficient"))
 #' # to be implemented in flipscores: summary(p.adjust(res))
 #' @export
+
 
 
 clip <- function(formula,
@@ -73,7 +77,11 @@ clip <- function(formula,
   if(is.null(cluster)){
     if(is.list(formula)){
       cltrs=sapply(formula,function(md) {
-        cluster <- model.matrix(md$cluster, data = md$data)
+        if(is(md$cluster,"formula"))
+          cluster <- model.matrix(md$cluster, data = md$data)
+        else
+            cluster= md$cluster
+
         unique(cluster)})
       cluster_names=unique(as.vector(cltrs))
     }
@@ -105,7 +113,8 @@ clip <- function(formula,
       formula[[i]]$data=eval(formula[[i]]$call$data, parent.frame())
 
     out_list=lapply(formula, function(frm)
-      .clip (formula(frm), frm$data, cluster,flips,alternative,cluster_names=cluster_names)
+      .clip (formula(frm), frm$data, cluster,flips,alternative,
+             cluster_names=cluster_names,tested_coeffs=tested_coeffs)
     )
     out=.make_output_from_list_Tspace_summary_table(out_list,original_call)
     return(out)
@@ -116,11 +125,17 @@ clip <- function(formula,
     inherits(x, "list")))) {
 
     for(i in 1:length(formula))
-      formula[[i]]$data=eval(formula[[i]]$call$data, parent.frame())
+      formula[[i]]$data=eval(formula[[i]]$data, parent.frame())
 
-    out_list=lapply(formula, function(frm)
-      .clip (formula(frm), frm$data, frm$cluster,flips,alternative,cluster_names=cluster_names)
-    )
+    out_list=lapply(formula, function(frm){
+      if(is(frm$cluster,"formula"))
+        cluster=model.matrix(frm$cluster, data = frm$data) else
+          cluster= frm$cluster
+
+      .clip(frm$formula, frm$data,
+             cluster,flips,alternative,
+             cluster_names=cluster_names,tested_coeffs=tested_coeffs)
+    })
     out=.make_output_from_list_Tspace_summary_table(out_list,original_call)
     return(out)
 
@@ -133,7 +148,8 @@ clip <- function(formula,
     #message("flipscores: list of formulas detected -> converting to glms")
 
     out_list=lapply(formula, function(frm)
-      .clip (frm, data, cluster,flips,alternative,cluster_names=cluster_names)
+      .clip (frm, data, cluster,flips,alternative,
+             cluster_names=cluster_names,tested_coeffs=tested_coeffs)
     )
 
     out=.make_output_from_list_Tspace_summary_table(out_list,original_call)
@@ -144,7 +160,8 @@ clip <- function(formula,
   ##############################################################
   # CASE 1: standard formula -> original flipscores engine
   ##############################################################
-  out=.clip(formula, data, cluster,flips,alternative,cluster_names=cluster_names)
+  out=.clip(formula, data, cluster,flips,alternative,
+            cluster_names=cluster_names,tested_coeffs=tested_coeffs)
 
   out$call <- original_call
   class(out) <- c("remmm", class(out))
@@ -153,7 +170,8 @@ clip <- function(formula,
 }
 
 ###################################
-.clip <- function(formula, data, cluster,flips,alternative,cluster_names){
+.clip <- function(formula, data, cluster,flips,alternative,
+                  cluster_names,tested_coeffs=NULL){
   D <- formula_to_matrices(formula, data = data)
   names_X=colnames(D$X)
   if(is.null(tested_coeffs)) tested_coeffs=names_X
@@ -204,6 +222,7 @@ clip <- function(formula,
   scores=Xr[,]*Yr
 
   # raggruppa per cluster
+  if(is.null(cluster)) cluster=1:nrow(scores)
   A <- rowsum(A, group = cluster)
   scores <- rowsum(scores, group = cluster)
 

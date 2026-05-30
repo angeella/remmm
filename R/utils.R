@@ -161,7 +161,7 @@ whiten_mf_from_V <- function(formula, data, V, id_col = NULL,
 
 
 .make_summary_table <- function(scores,Tspace,alternative){
-  p.values=apply(Tspace,2,.t2p_only_first, alternative)
+  p.values=apply(Tspace,2,flipscores:::.t2p_only_first, alternative)
   data.frame(model=colnames(scores$scores),score= colSums(scores$scores),p.values=p.values)
 }
 
@@ -221,6 +221,8 @@ whiten_mf_from_V <- function(formula, data, V, id_col = NULL,
 #' result <- fill_scores_by_cluster(scores, cluster_names)
 #' result
 #'
+#'@noRd
+#'@keywords internal
 fill_scores_by_cluster <- function(scores_A, cluster_names) {
 
   # --- Input Validation ---
@@ -281,6 +283,8 @@ fill_scores_by_cluster <- function(scores_A, cluster_names) {
 #'
 #' result$Y  # response matrix
 #' result$X  # design matrix (x, z + intercept column)
+#'@noRd
+#'@keywords internal
 
 formula_to_matrices <- function(formula, data) {
 

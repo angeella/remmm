@@ -4,17 +4,22 @@
 \alias{clip}
 \title{Cluster wise sign-flipping score test}
 \usage{
-clip(formula, data, cluster,
-n_flips = 1000, alternative= "two.sided", seed = 1234, V = NULL)
+clip(formula, data = NULL, cluster = NULL,
+n_flips = 5000, alternative= "two.sided", seed = 1234)
 }
 \arguments{
-\item{formula}{A model \code{\link{formula}}. For multivariate outcomes, \code{formula}
+\item{formula}{One of:
+\enumerate{
+  \item A \code{formula} object. For multivariate outcomes, \code{formula}
 may refer to a matrix response in \code{data} (as in \code{\link[stats]{lm}})
-or to a column in \code{data}.}
+or to a column in \code{data} (e.g. \code{cbind(y1,y2) ~ x})
+  \item A list of fitted \code{glm} objects
+  \item A list of \code{formula} objects
+}}
 
-\item{data}{A \code{data.frame} containing the variables referenced in \code{formula}.}
+\item{data}{A \code{data.frame} containing the variables referenced in \code{formula} (used in cases 1 and 3).}
 
-\item{cluster}{Cluster identifier. Character string naming the clustering column in \code{data}.}
+\item{cluster}{Cluster identifier. \code{vector} or \code{formula} (e.g. \code{~ cluster}) naming the clustering column in \code{data}.}
 
 \item{n_flips}{Integer. Number of flips to generate. Default is 5000.}
 
@@ -22,18 +27,15 @@ or to a column in \code{data}.}
 coefficients. One of \code{"two.sided"}, \code{"greater"}, \code{"less"}.
 Default is \code{"two.sided"}.}
 
-\item{seed}{Optional integer seed for reproducibility. Default 1234.}
+\item{seed}{Optional integer seed for reproducibility. Default \code{NULL}.}
 
-\item{V}{Working covariance matrix to be used inside the score contributions.
-It can be a single matrix (univariate case, one response) or a list of matrices (one per outcome).
-Default is NULL, i.e., identity matrix.}
+\item{...}{not implemented, yet.}
 }
 \value{
-A \code{jointest} object, i.e., a list containing the following objects:
+A \code{remm} object, i.e., a list containing the following objects:
 \describe{
   \item{Tspace}{\code{data.frame} where rows represents the sign-flipping transformed (plus the identity one) test and columns the variables.}
   \item{summary_table}{\code{data.frame} containing for each model the estimated parameter(s), score(s), std error(s), test(s), partial correlation(s) and p-value(s).}
-  \item{mods}{List of \code{flipscores} objects, one for each outcome.}
   \item{call}{The matched call.}
 }
 }
@@ -42,21 +44,34 @@ This function implements a *cluster wise sign-flipping score-based test* for
 one or multiple outcomes under within-cluster dependence (i.e., non-independent observations).
 }
 \examples{
-library(remmm)
-db <- simulateData(Sigma = "equicorrelation", rho = 0.5, beta = c(0.5, 1.2), gamma = 0.8,
-  J = 8, nJ = rep(25, 8))
+##############################################
+set.seed(1)
+n=50
+D=data.frame(matrix(rnorm(n*5),n,5))
+Y=matrix(rnorm(n*2),n,2)
+names(D)[4:5]=c("Y1","Y2")
+cluster=rep(1:10,5)
+res=clip(cbind(Y1,Y2)~X1+X2+X3,data=D,cluster=cluster)
+summary(res)
 
-str(db)
+res=clip(list(Y1~X1+X2+X3,Y2~X1+X2+X3),data=D,cluster=cluster)
+summary(res)
 
-fit <- clip(Y ~ X + Z, data = db,  cluster = "id")
-summary(jointest::p.adjust(fit))
-summary(jointest::combine_tests(fit))
-summary(jointest::combine_tests(fit, by="model"))
-summary(jointest::combine_tests(fit, by="coefficient"))
+mods=list(lm(Y1~X1+X2+X3,data=D),lm(Y2~X1+X2+X3,data=D))
+res=clip(mods,data=D,cluster=cluster)
+summary(res)
+mods=list(list(formula=Y1~X1+X2+X3,data=D,cluster=cluster),
+          list(formula=Y2~X1+X2+X3,data=D,cluster=cluster))
+res=clip(mods)
+summary(res)
+summary(combine_tests(res))
+summary(combine_tests(res, by="model"))
+summary(combine_tests(res, by="coefficient"))
+# to be implemented in flipscores: summary(p.adjust(res))
 }
 \seealso{
 \code{\link[flipscores]{flipscores}}
 }
 \author{
-Angela Andreella
+Angela Andreella, Livio Finos
 }
