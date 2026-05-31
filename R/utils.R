@@ -169,9 +169,16 @@ whiten_mf_from_V <- function(formula, data, V, id_col = NULL,
 .make_output_from_list_Tspace_summary_table <- function(res_list,original_call){
   Tspace=lapply(res_list,function(x) x$Tspace)
   summary_table=lapply(res_list,function(x) x$summary_table)
+  mods=lapply(res_list,function(x) x$mod)
+  names(mods)=paste0("mod",1:length(mods))
+
   Tspace=do.call(cbind,Tspace)
   summary_table=do.call(rbind,summary_table)
-  out=list(Tspace=Tspace,summary_table=summary_table,call = original_call)
+  out=list(Tspace=Tspace,
+           summary_table=summary_table,
+           mods=mods,
+           call = original_call)
+
   class(out) <- c("remmm", class(out))
   class(out) <- c("joint_flipscores", class(out))
   return(out)

@@ -24,6 +24,7 @@
 #'   \item{Tspace}{\code{data.frame} where rows represents the sign-flipping transformed (plus the identity one) test and columns the variables.}
 #'   \item{summary_table}{\code{data.frame} containing for each model the estimated parameter(s), score(s), std error(s), test(s), partial correlation(s) and p-value(s).}
 #'   \item{call}{The matched call.}
+#'   \item{formula}{The formula.}
 #' }
 #'
 #' @seealso \code{\link[flipscores]{flipscores}}
@@ -137,6 +138,7 @@ clip <- function(formula,
              cluster_names=cluster_names,tested_coeffs=tested_coeffs)
     })
     out=.make_output_from_list_Tspace_summary_table(out_list,original_call)
+
     return(out)
 
   }
@@ -192,7 +194,9 @@ clip <- function(formula,
   summary_table=do.call(rbind,summary_table)
   summary_table=summary_table[,c(2,1,3:ncol(summary_table))]
   rownames(summary_table)=NULL
-  list(Tspace=Tspace,summary_table=summary_table)
+  list(Tspace=Tspace,summary_table=summary_table,mod=list(formula=formula,
+                                                          x_names=colnames(D$X),
+                                                          y_names=colnames(D$Y)))
 }
 
 
