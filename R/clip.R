@@ -43,14 +43,14 @@
 #' names(D)[4:5]=c("Y1","Y2")
 #' cluster=rep(1:10,5)
 #' res=clip(cbind(Y1,Y2)~X1+X2+X3,data=D,cluster=cluster)
-#' summary(res)
+#' summary.clip(res)
 #'
 #' res=clip(list(Y1~X1+X2+X3,Y2~X1+X2+X3),data=D,cluster=cluster)
-#' summary(res)
+#' summary.clip(res)
 #'
 #' mods=list(lm(Y1~X1+X2+X3,data=D),lm(Y2~X1+X2+X3,data=D))
 #' res=clip(mods,data=D,cluster=cluster)
-#' summary(res)
+#' summary.clip(res)
 #' mods=list(list(formula=Y1~X1+X2+X3,data=D,cluster=cluster),
 #'           list(formula=Y2~X1+X2+X3,data=D,cluster=cluster))
 #' res=clip(mods)
@@ -81,7 +81,7 @@ clip <- function(formula,
         if(is(md$cluster,"formula"))
           cluster <- model.matrix(md$cluster, data = md$data)
         else
-            cluster= md$cluster
+          cluster= md$cluster
 
         unique(cluster)})
       cluster_names=unique(as.vector(cltrs))
@@ -92,7 +92,7 @@ clip <- function(formula,
     cluster_names=unique(cluster)
   }
   n_obs=length(cluster_names)
-
+  #TODO sistemare i obs_names
 
 
   if(!is.null(seed)) set.seed(seed)
@@ -133,9 +133,9 @@ clip <- function(formula,
         cluster=model.matrix(frm$cluster, data = frm$data) else
           cluster= frm$cluster
 
-      .clip(frm$formula, frm$data,
-             cluster,flips,alternative,
-             cluster_names=cluster_names,tested_coeffs=tested_coeffs)
+        .clip(frm$formula, frm$data,
+              cluster,flips,alternative,
+              cluster_names=cluster_names,tested_coeffs=tested_coeffs)
     })
     out=.make_output_from_list_Tspace_summary_table(out_list,original_call)
 
@@ -166,8 +166,7 @@ clip <- function(formula,
             cluster_names=cluster_names,tested_coeffs=tested_coeffs)
 
   out$call <- original_call
-  class(out) <- c("remmm", class(out))
-  class(out) <- c("joint_flipscores", class(out))
+  class(out) <- c("clip", "remmm", "fs_lm",class(out))
   return(out)
 }
 
@@ -194,22 +193,26 @@ clip <- function(formula,
   summary_table=do.call(rbind,summary_table)
   summary_table=summary_table[,c(2,1,3:ncol(summary_table))]
   rownames(summary_table)=NULL
-  list(Tspace=Tspace,summary_table=summary_table,mod=list(formula=formula,
-                                                          x_names=colnames(D$X),
-                                                          y_names=colnames(D$Y)))
+  list(Tspace=Tspace,
+       scores=scores,
+       summary_table=summary_table,
+       mod=list(formula=formula,
+                x_names=colnames(D$X),
+                y_names=colnames(D$Y)))
 }
 
 
 
 # for standardized (see in flipscores):
-.score_std=function(flp,scores_objs) {
+.score_std=function(flp,scores) {
   # scr_eff # un vettore
-  numerator=crossprod(flp,scores_objs$scores) #t(scr_eff)%*%flp
+
+  numerator=crossprod(flp,scores) #t(scr_eff)%*%flp
   if (all(sign(flp)==1)|(all(sign(flp)==-1))){
     denominator = 1
   } else {
-    denominator = 1 - sum((colSums(scores_objs$vars_objs$A[flp==1,,drop=FALSE])
-                           -colSums(scores_objs$vars_objs$A[flp==-1,,drop=FALSE]))^2)
+    denominator = 1 - sum((colSums(attributes(scores)$scale_objects$A[flp==1,,drop=FALSE])
+                          -colSums(attributes(scores)$scale_objects$A[flp==-1,,drop=FALSE]))^2)
   }
   as.vector(numerator/((denominator)**0.5))
 }
@@ -231,7 +234,11 @@ clip <- function(formula,
   scores <- rowsum(scores, group = cluster)
 
   temp=fill_scores_by_cluster(list(scores=scores,A=A),cluster_names)
-  list(scores=temp$scores, vars_objs=list(A=temp$A))#,Xr=Xr))
+  scale_objects=list(A=A)
+  scores=temp$scores
+  attr(scores,"scale_objects")=list(A=temp$A)
+
+  scores
 }
 
 ###################
@@ -260,3 +267,14 @@ clip <- function(formula,
 
   return(Tspace)
 }
+#################
+
+#' @export
+summary.clip <- flipscores:::summary.fs_lm
+
+
+#' @export
+print.clip <- flipscores:::print.fs_lm
+
+#' @export
+model.matrix.clip <- flipscores:::model.matrix.fs_lm

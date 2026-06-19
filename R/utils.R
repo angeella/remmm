@@ -162,7 +162,7 @@ whiten_mf_from_V <- function(formula, data, V, id_col = NULL,
 
 .make_summary_table <- function(scores,Tspace,alternative){
   p.values=apply(Tspace,2,flipscores:::.t2p_only_first, alternative)
-  data.frame(model=colnames(scores$scores),score= colSums(scores$scores),p.values=p.values)
+  data.frame(response=colnames(scores),score= colSums(scores),p.values=p.values)
 }
 
 
