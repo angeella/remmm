@@ -113,7 +113,7 @@ flip2sss <- function(formula=NULL,
     mods[[i]]$call$data = eval(data2lev)
     mods[[i]]$call$formula = eval(as.formula(vars_between_formulas_dummy[[i]]))
   }
-  res = flipscores(mods, flips = flips, ...)
+  res = flipscores(mods, flips = flips, n_flips = n_flips, ...)
 
 
   # summary(res)
