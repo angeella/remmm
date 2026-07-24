@@ -74,9 +74,9 @@ flip2sss <- function(formula=NULL,
                      flips = NULL,
                      ...){
 
-  if(is(cluster,"formula")){
-    cluster=model.frame(cluster,data)
-  }
+  cluster= .get_cluster_vector(cluster,data)
+
+
 
   ###################
 

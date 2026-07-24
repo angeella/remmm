@@ -13,7 +13,7 @@
 #'   }
 #' @param data A \code{data.frame} containing the variables referenced in \code{formula} (used in cases 1 and 3).
 #' @param n_flips Integer. Number of flips to generate. Default is 5000.
-#' @param cluster Cluster identifier. \code{vector} or \code{formula} (e.g. \code{~ cluster}) naming the clustering column in \code{data}.
+#' @param cluster Cluster identifier. \code{formula} (e.g. \code{~ cluster}) naming the clustering column in \code{data} or a \code{vector}. When missing values are presents in the data, use the \code{formula} format or \code{vector} format with names that are a superset of \code{rownames(data)}.
 #' @param alternative Character string specifying the alternative hypothesis used to test the fixed effect
 #' coefficients. One of \code{"two.sided"}, \code{"greater"}, \code{"less"}.
 #' Default is \code{"two.sided"}.
@@ -78,17 +78,12 @@ clip <- function(formula,
   if(is.null(cluster)){
     if(is.list(formula)){
       cltrs=sapply(formula,function(md) {
-        if(is(md$cluster,"formula"))
-          cluster <- model.matrix(md$cluster, data = md$data)
-        else
-          cluster= md$cluster
-
-        unique(cluster)})
+        .get_cluster_vector(md$cluster,md$data)
+        })
       cluster_names=unique(as.vector(cltrs))
     }
   } else {
-    if(is(cluster,"formula"))
-      cluster <- model.matrix(cluster, data = data)
+    cluster=.get_cluster_vector(cluster,data)
     cluster_names=unique(cluster)
   }
   n_obs=length(cluster_names)
@@ -169,18 +164,28 @@ clip <- function(formula,
   class(out) <- c("clip", "remmm", "fs_lm",class(out))
   return(out)
 }
+#######################
 
 ###################################
 .clip <- function(formula, data, cluster,flips,alternative,
                   cluster_names,tested_coeffs=NULL){
   D <- formula_to_matrices(formula, data = data)
+  if(!is.null(names(cluster))) cluster=cluster[rownames(D$X)] else
+    if((length(cluster)!=nrow(D$X))||(length(cluster)!=nrow(D$Y))){
+      warning("length of cluster (",length(cluster),") is different from the number of rows of X (",nrow(D$X),") or Y (",nrow(D$Y),").")
+  }
+
   names_X=colnames(D$X)
   if(is.null(tested_coeffs)) tested_coeffs=names_X
-  scores=lapply(tested_coeffs,function(i).get_scores(X=D$X[,i,drop=FALSE],
-                                                     Y=D$Y,
-                                                     Z=D$X[,setdiff(names_X,i),drop=FALSE],
-                                                     cluster=cluster,
-                                                     cluster_names=cluster_names))
+  tested_coeffs=intersect(tested_coeffs,colnames(D$X))
+  scores=lapply(tested_coeffs,
+                function(i){if(is.character(i)) i=which(colnames(D$X)==i)
+                  .get_scores(X=D$X[,i,drop=FALSE],
+                              Y=D$Y,
+                              Z=D$X[,-i,drop=FALSE],
+                              cluster=cluster,
+                              cluster_names=cluster_names,
+                              assign=attr(D$X, "assign")[i])})
   Tspace=lapply(scores,.flip_test,
                 flips=flips)
   names(Tspace) <- names(scores) <- tested_coeffs
@@ -191,7 +196,7 @@ clip <- function(formula,
 
   Tspace=do.call(cbind,Tspace)
   summary_table=do.call(rbind,summary_table)
-  summary_table=summary_table[,c(2,1,3:ncol(summary_table))]
+  summary_table=summary_table[,c(2,3,1,4:ncol(summary_table))]
   rownames(summary_table)=NULL
   list(Tspace=Tspace,
        scores=scores,
@@ -219,10 +224,10 @@ clip <- function(formula,
 
 ######################
 #X solo colonna
-.get_scores<- function(X,Y,Z,cluster,cluster_names){
-  Yr <- .get_IH(Z)%*%Y
+.get_scores<- function(X,Y,Z,cluster,cluster_names,assign=NULL){
   Q=qr.Q(qr(Z))
   Xr=crossprod(diag(nrow(Z))-tcrossprod(Q),X)
+  Yr <- crossprod(diag(nrow(Z))-tcrossprod(Q),Y) #.get_IH(Z)%*%Y
   m = sum(Xr^2)
   # we divide it by sqrt(m) which is the sd scaling factor of the observed test stat (i.e. effective and standardized have the same observed test stat)
   A=Xr[,]*Q/sqrt(m)
@@ -234,10 +239,10 @@ clip <- function(formula,
   scores <- rowsum(scores, group = cluster)
 
   temp=fill_scores_by_cluster(list(scores=scores,A=A),cluster_names)
-  scale_objects=list(A=A)
   scores=temp$scores
   attr(scores,"scale_objects")=list(A=temp$A)
-
+  attr(scores, "assign")=assign
+  attr(scores, "Xnorm2")=sum(m)
   scores
 }
 
