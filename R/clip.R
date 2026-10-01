@@ -32,6 +32,7 @@
 #' @importFrom flipscores flipscores
 #' @importFrom flipscores combine_tests
 #' @importFrom flipscores combine_contrasts
+#' @importFrom flipscores make_flips
 #' @import stats
 #' @author Angela Andreella, Livio Finos
 #' @examples
