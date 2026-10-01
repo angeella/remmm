@@ -53,14 +53,14 @@ Y=matrix(rnorm(n*2),n,2)
 names(D)[4:5]=c("Y1","Y2")
 cluster=rep(1:10,5)
 res=clip(cbind(Y1,Y2)~X1+X2+X3,data=D,cluster=cluster)
-summary(res)
+summary.clip(res)
 
 res=clip(list(Y1~X1+X2+X3,Y2~X1+X2+X3),data=D,cluster=cluster)
-summary(res)
+summary.clip(res)
 
 mods=list(lm(Y1~X1+X2+X3,data=D),lm(Y2~X1+X2+X3,data=D))
 res=clip(mods,data=D,cluster=cluster)
-summary(res)
+summary.clip(res)
 mods=list(list(formula=Y1~X1+X2+X3,data=D,cluster=cluster),
           list(formula=Y2~X1+X2+X3,data=D,cluster=cluster))
 res=clip(mods)

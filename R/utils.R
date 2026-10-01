@@ -162,25 +162,39 @@ whiten_mf_from_V <- function(formula, data, V, id_col = NULL,
 
 .make_summary_table <- function(scores,Tspace,alternative){
   p.values=apply(Tspace,2,flipscores:::.t2p_only_first, alternative)
-  data.frame(response=colnames(scores),score= colSums(scores),p.values=p.values)
+  score= colSums(scores)
+  data.frame(
+    .assign=attr(scores, "assign"),
+    response=colnames(scores),
+    estimate=score/attr(scores, "Xnorm2"),
+    score= score,
+    p.values=p.values)
 }
 
 
 .make_output_from_list_Tspace_summary_table <- function(res_list,original_call){
   Tspace=lapply(res_list,function(x) x$Tspace)
-  summary_table=lapply(res_list,function(x) x$summary_table)
-  mods=lapply(res_list,function(x) x$mod)
-  names(mods)=paste0("mod",1:length(mods))
-
   Tspace=do.call(cbind,Tspace)
+
+  mods=lapply(res_list,function(x) x$mod)
+
+  if(is.null(names(res_list)))
+    mods_names=names(res_list) else
+      mods_names=paste0("mod",1:length(mods))
+  names(mods)=mods_names
+
+  summary_table=lapply(1:length(res_list),function(i){
+    cbind(model=mods_names[i],res_list[[i]]$summary_table)
+  })
   summary_table=do.call(rbind,summary_table)
+
+
   out=list(Tspace=Tspace,
            summary_table=summary_table,
            mods=mods,
            call = original_call)
 
-  class(out) <- c("remmm", class(out))
-  class(out) <- c("joint_flipscores", class(out))
+  class(out) <- c("clip", "remmm", "fs_lm",class(out))
   return(out)
 }
 
@@ -264,11 +278,11 @@ fill_scores_by_cluster <- function(scores_A, cluster_names) {
     )
     result_A[matching_names, ] <- scores_A$A[matching_names, , drop = FALSE]
 
-    return(list(result_scores,result_A))
+    return(list(scores=result_scores,A=result_A))
   } else {
-    scores_A$scores=scores_A$scores[cluster_names,,drop=FALSE]
-    scores_A$A=scores_A$A[cluster_names,,drop=FALSE]
-    return(scores_A)
+    scores=scores_A$scores[cluster_names,,drop=FALSE]
+    A=scores_A$A[cluster_names,,drop=FALSE]
+    return(list(scores=scores,A=A))
   }
 }
 
@@ -312,4 +326,17 @@ formula_to_matrices <- function(formula, data) {
 }
 
 
-
+#################################
+.get_cluster_vector <- function(cluster,data){
+  if(is(cluster,"formula")){
+    cluster <- model.matrix(cluster, data = data)
+    cluster=cluster[,setdiff(colnames(cluster),"(Intercept)")]
+  }
+  if(!is.null(ncol(cluster))){
+    if(is.null(ncol(cluster))||ncol(cluster)==1)
+      cluster=as.vector(cluster) else
+        if(ncol(cluster)>1)
+          cluster=apply(cluster,1,paste0,collapse=".")
+  }
+cluster
+}
